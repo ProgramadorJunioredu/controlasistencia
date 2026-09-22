@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Asistencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF0EB;
+    --panel:#FFFFFF;
+    --ink:#1B1E1B;
+    --ink-soft:#565B54;
+    --line:#D6D9D1;
+    --accent:#1F4B3F;
+    --accent-light:#2F6E5B;
+    --danger:#9B2B22;
+    --danger-bg:#F7E4E1;
+    --success:#1F5C3A;
+    --success-bg:#E4F0E7;
+    --amber:#8A5F1E;
+    --amber-bg:#F3E7D2;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:980px;margin:0 auto;}
+
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header.top h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:1.7rem;
+    font-weight:700;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  header.top .clock{
+    font-size:0.95rem;
+    color:var(--ink-soft);
+    text-align:right;
+    line-height:1.4;
+  }
+  header.top .clock strong{color:var(--ink);}
+  .session-user{margin:4px 0 0;color:var(--ink-soft);font-size:.8rem;}
+  .top-actions{display:flex;align-items:center;gap:18px;}
+  .logout-btn{padding:8px 12px;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1.15fr;
+    gap:22px;
+  }
+  @media(max-width:760px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:24px;
+  }
+  .panel h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:1.05rem;
+    font-weight:600;
+    margin:0 0 18px;
+  }
+
+  label{
+    display:block;
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    margin-top:16px;
+  }
+  label:first-of-type{margin-top:0;}
+  input[type=text]{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:0.98rem;
+    background:#FBFBF9;
+    color:var(--ink);
+  }
+  input[type=text]:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    background:#fff;
+  }
+
+  .dresscode{
+    margin-top:22px;
+    padding:12px 14px;
+    background:var(--amber-bg);
+    border-left:3px solid var(--amber);
+    font-size:0.85rem;
+    color:#5C3F14;
+    border-radius:2px;
+    line-height:1.5;
+  }
+
+  .cam-frame{
+    position:relative;
+    width:100%;
+    aspect-ratio:4/3;
+    background:#0E0F0D;
+    border-radius:3px;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .cam-frame video, .cam-frame canvas, .cam-frame img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .cam-frame .guide{
+    position:absolute;
+    left:28%;
+    right:28%;
+    top:42%;
+    bottom:8%;
+    border:2px dashed rgba(255,255,255,0.55);
+    border-radius:4px;
+    pointer-events:none;
+  }
+  .cam-frame .hint{
+    position:absolute;
+    top:8px; left:8px; right:8px;
+    font-size:0.72rem;
+    color:#fff;
+    background:rgba(0,0,0,0.45);
+    padding:5px 8px;
+    border-radius:2px;
+  }
+  .cam-actions{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+  }
+  button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:500;
+    font-size:0.9rem;
+    padding:11px 16px;
+    border-radius:3px;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition:opacity .15s ease;
+  }
+  button:disabled{opacity:0.45;cursor:not-allowed;}
+  button:hover:not(:disabled){opacity:0.88;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-secondary{background:transparent;color:var(--ink);border-color:var(--line);}
+  .btn-block{width:100%;}
+
+  .status-banner{
+    margin-top:26px;
+    border-radius:4px;
+    padding:20px 22px;
+    display:none;
+  }
+  .status-banner.show{display:block;}
+  .status-banner.approved{background:var(--success-bg);border:1px solid var(--success);}
+  .status-banner.rejected{background:var(--danger-bg);border:1px solid var(--danger);}
+  .status-banner .title{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:1.15rem;
+    margin:0 0 6px;
+  }
+  .status-banner.approved .title{color:var(--success);}
+  .status-banner.rejected .title{color:var(--danger);}
+  .status-banner p{margin:0;font-size:0.92rem;line-height:1.5;color:var(--ink);}
+
+  table.log{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:14px;
+    font-size:0.85rem;
+  }
+  table.log th, table.log td{
+    text-align:left;
+    padding:9px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  table.log th{
+    color:var(--ink-soft);
+    font-weight:500;
+    font-size:0.75rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  .pill{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:12px;
+    font-size:0.72rem;
+    font-weight:500;
+  }
+  .pill.ok{background:var(--success-bg);color:var(--success);}
+  .pill.no{background:var(--danger-bg);color:var(--danger);}
+
+  .log-section{margin-top:26px;}
+  .log-section h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:1.05rem;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .log-note{font-size:0.78rem;color:var(--ink-soft);margin:0 0 6px;}
+  .empty-log{font-size:0.88rem;color:var(--ink-soft);padding:14px 0;}
+  .log-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;}
+  .log-toolbar input{flex:1;min-width:190px;padding:9px 11px;border:1px solid var(--line);border-radius:3px;font:inherit;background:#FBFBF9;}
+  .log-toolbar input:focus{outline:2px solid var(--accent);outline-offset:1px;background:#fff;}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  .stat{flex:1;min-width:110px;background:#F7F8F5;border:1px solid var(--line);border-radius:3px;padding:10px 12px;}
+  .stat strong{display:block;font-family:'Space Grotesk',sans-serif;font-size:1.25rem;}
+  .stat span{font-size:.73rem;color:var(--ink-soft);}
+  .cam-frame{transition:border-color .2s ease, box-shadow .2s ease;}
+  .cam-frame.ready{border-color:var(--success);box-shadow:0 0 0 3px rgba(31,92,58,.12);}
+  .status-banner{animation:statusIn .25s ease both;}
+  @keyframes statusIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  @media(max-width:520px){body{padding:20px 12px 40px}.panel{padding:18px}.cam-actions{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Control de Asistencia</h1>
+      <p class="session-user" id="sessionUser"></p>
+    </div>
+    <div class="top-actions">
+      <button class="btn-secondary logout-btn" id="btnLogout" type="button">Cerrar sesión</button>
+      <div class="clock" id="clock">Cargando fecha…</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Datos personales</h2>
+      <label for="nombres">Nombres completos</label>
+      <input type="text" id="nombres" placeholder="Ej. Ana María">
+
+      <label for="apellidos">Apellidos</label>
+      <input type="text" id="apellidos" placeholder="Ej. Torres Quispe">
+
+      <label for="dni">DNI</label>
+      <input type="text" id="dni" placeholder="Ej. 71234567" maxlength="15">
+
+      <div class="dresscode">
+        <strong>Requisito de uniforme:</strong> para registrar tu asistencia, debes llevar polo o camisa de manga larga de color negro. El sistema verifica esto automáticamente al tomar la foto.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Verificación fotográfica</h2>
+      <div class="cam-frame" id="camFrame">
+        <div class="hint">Ubícate de frente, torso visible dentro del recuadro</div>
+        <video id="video" autoplay playsinline muted></video>
+        <div class="guide"></div>
+      </div>
+      <canvas id="canvas" style="display:none;"></canvas>
+
+      <div class="cam-actions">
+        <button class="btn-primary btn-block" id="btnCapture">Capturar foto y registrar</button>
+      </div>
+      <div class="cam-actions" id="retakeRow" style="display:none;">
+        <button class="btn-secondary btn-block" id="btnRetake">Tomar otra foto</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-banner" id="statusBanner">
+    <p class="title" id="statusTitle"></p>
+    <p id="statusText"></p>
+  </div>
+
+  <div class="log-section panel">
+    <h2>Registros de hoy</h2>
+    <p class="log-note">Este listado es compartido: lo pueden ver todas las personas que usen este mismo registro.</p>
+    <div class="stats" aria-label="Resumen de registros">
+      <div class="stat"><strong id="totalCount">0</strong><span>Total</span></div>
+      <div class="stat"><strong id="approvedCount">0</strong><span>Registradas</span></div>
+      <div class="stat"><strong id="rejectedCount">0</strong><span>Rechazadas</span></div>
+    </div>
+    <div class="log-toolbar">
+      <input type="search" id="logSearch" placeholder="Buscar por nombre o DNI" aria-label="Buscar registros">
+    </div>
+    <div id="logWrap"><p class="empty-log">Aún no hay registros hoy.</p></div>
+  </div>
+
+</div>
+
+<script>
+let video = document.getElementById('video');
+const sessionUser = document.getElementById('sessionUser');
+const btnLogout = document.getElementById('btnLogout');
+const canvas = document.getElementById('canvas');
+const btnCapture = document.getElementById('btnCapture');
+const btnRetake = document.getElementById('btnRetake');
+const retakeRow = document.getElementById('retakeRow');
+const camFrame = document.getElementById('camFrame');
+const statusBanner = document.getElementById('statusBanner');
+const statusTitle = document.getElementById('statusTitle');
+const statusText = document.getElementById('statusText');
+const clockEl = document.getElementById('clock');
+const logWrap = document.getElementById('logWrap');
+const logSearch = document.getElementById('logSearch');
+const totalCount = document.getElementById('totalCount');
+const approvedCount = document.getElementById('approvedCount');
+const rejectedCount = document.getElementById('rejectedCount');
+
+let stream = null;
+let capturedImg = null;
+let recordsToday = [];
+
+const session = localStorage.getItem('presente:session');
+let isAuthenticated = Boolean(session);
+if(!session){
+  window.location.replace('login.html');
+}else{
+  try{
+    const user = JSON.parse(session);
+    sessionUser.textContent = `Sesión activa: ${user.username}`;
+  }catch(error){
+    isAuthenticated = false;
+    localStorage.removeItem('presente:session');
+    window.location.replace('login.html');
+  }
+}
+
+btnLogout.addEventListener('click', () => {
+  if(stream) stream.getTracks().forEach(track => track.stop());
+  localStorage.removeItem('presente:session');
+  window.location.replace('login.html');
+});
+
+function todayKey(){
+  const d = new Date();
+  return d.toISOString().slice(0,10); // YYYY-MM-DD
+}
+
+function updateClock(){
+  const d = new Date();
+  const fecha = d.toLocaleDateString('es-PE', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  const hora = d.toLocaleTimeString('es-PE');
+  clockEl.innerHTML = fecha.charAt(0).toUpperCase()+fecha.slice(1) + '<br><strong>' + hora + '</strong>';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+async function startCamera(){
+  try{
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('unsupported');
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio:false });
+    video.srcObject = stream;
+    camFrame.classList.add('ready');
+  }catch(err){
+    camFrame.innerHTML = '<div class="hint" style="position:static;background:transparent;color:#9B2B22;padding:20px;">No se pudo acceder a la cámara. Revisa los permisos del navegador e intenta recargar la página.</div>';
+    btnCapture.disabled = true;
+  }
+}
+if(isAuthenticated) startCamera();
+
+function luminance(r,g,b){
+  return 0.299*r + 0.587*g + 0.114*b;
+}
+
+// Analiza una región central-inferior del cuadro (zona de torso) buscando
+// predominio de color oscuro/negro. Es una verificación automática por color,
+// no un reconocimiento de prendas, así que ante dudas administración puede
+// revisar la foto manualmente.
+function analizarVestimenta(ctx, w, h){
+  const x0 = Math.floor(w*0.28), x1 = Math.floor(w*0.72);
+  const y0 = Math.floor(h*0.42), y1 = Math.floor(h*0.92);
+  const region = ctx.getImageData(x0, y0, x1-x0, y1-y0).data;
+  let total=0, sumL=0, darkCount=0;
+  for(let i=0;i<region.length;i+=4){
+    const r=region[i], g=region[i+1], b=region[i+2];
+    const l = luminance(r,g,b);
+    sumL += l;
+    if(l < 65) darkCount++;
+    total++;
+  }
+  const avgL = sumL/total;
+  const darkRatio = darkCount/total;
+  // Aprueba si el promedio de luminancia es bajo Y la mayoría de píxeles
+  // de la zona del torso son oscuros (indicativo de prenda negra).
+  const aprueba = avgL < 75 && darkRatio > 0.55;
+  return { aprueba, avgL: Math.round(avgL), darkRatio: Math.round(darkRatio*100) };
+}
+
+async function guardarRegistro(record){
+  const key = 'asistencia:' + todayKey() + ':' + record.dni + ':' + Date.now();
+  try{
+    if(window.storage){
+      await window.storage.set(key, JSON.stringify(record), true);
+    }else{
+      localStorage.setItem(key, JSON.stringify(record));
+    }
+  }catch(e){
+    console.error('No se pudo guardar el registro', e);
+  }
+  await cargarRegistros();
+}
+
+function renderStats(records){
+  totalCount.textContent = records.length;
+  approvedCount.textContent = records.filter(r => r.status === 'aprobado').length;
+  rejectedCount.textContent = records.filter(r => r.status !== 'aprobado').length;
+}
+
+function renderTable(){
+  const query = logSearch.value.trim().toLowerCase();
+  const filtered = recordsToday.filter(r =>
+    `${r.nombres} ${r.apellidos} ${r.dni}`.toLowerCase().includes(query)
+  );
+  if(!filtered.length){
+    logWrap.innerHTML = `<p class="empty-log">${recordsToday.length ? 'No hay coincidencias para esa búsqueda.' : 'Aún no hay registros hoy.'}</p>`;
+    return;
+  }
+  const rows = filtered.map(r => `
+    <tr>
+      <td>${new Date(r.timestamp).toLocaleTimeString('es-PE')}</td>
+      <td>${r.nombres}</td>
+      <td>${r.apellidos}</td>
+      <td>${r.dni}</td>
+      <td>${r.status==='aprobado' ? '<span class="pill ok">Registrada</span>' : '<span class="pill no">Rechazada</span>'}</td>
+    </tr>`).join('');
+  logWrap.innerHTML = `<table class="log"><thead><tr><th>Hora</th><th>Nombres</th><th>Apellidos</th><th>DNI</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function cargarRegistros(){
+  try{
+    let keys = [];
+    if(window.storage){
+      const listado = await window.storage.list('asistencia:' + todayKey() + ':', true);
+      keys = listado && listado.keys ? listado.keys : [];
+    }else{
+      const prefix = 'asistencia:' + todayKey() + ':';
+      keys = Object.keys(localStorage).filter(key => key.indexOf(prefix) === 0);
+    }
+    if(!keys.length){
+      recordsToday = [];
+      renderStats(recordsToday);
+      logWrap.innerHTML = '<p class="empty-log">Aún no hay registros hoy.</p>';
+      return;
+    }
+    const records = [];
+    for(const k of keys){
+      try{
+        if(window.storage){
+          const item = await window.storage.get(k, true);
+          if(item) records.push(JSON.parse(item.value));
+        }else{
+          const item = localStorage.getItem(k);
+          if(item) records.push(JSON.parse(item));
+        }
+      }catch(e){}
+    }
+    records.sort((a,b)=> b.timestamp - a.timestamp);
+    recordsToday = records;
+    renderStats(recordsToday);
+    renderTable();
+  }catch(e){
+    logWrap.innerHTML = '<p class="empty-log">No se pudo cargar el listado de hoy.</p>';
+  }
+}
+if(isAuthenticated) cargarRegistros();
+logSearch.addEventListener('input', renderTable);
+
+function mostrarBanner(aprobado, mensaje){
+  statusBanner.classList.remove('approved','rejected');
+  statusBanner.classList.add('show', aprobado ? 'approved' : 'rejected');
+  statusTitle.textContent = aprobado ? '✔ Asistencia registrada' : '✘ Asistencia rechazada';
+  statusText.textContent = mensaje;
+}
+
+btnCapture.addEventListener('click', async () => {
+  const nombres = document.getElementById('nombres').value.trim();
+  const apellidos = document.getElementById('apellidos').value.trim();
+  const dni = document.getElementById('dni').value.trim();
+
+  if(!nombres || !apellidos || !dni){
+    mostrarBanner(false, 'Completa nombres, apellidos y DNI antes de tomar la foto.');
+    return;
+  }
+  if(!video.videoWidth){
+    mostrarBanner(false, 'La cámara aún no está lista. Espera un momento e intenta de nuevo.');
+    return;
+  }
+
+  const w = video.videoWidth, h = video.videoHeight;
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, w, h);
+
+  const resultado = analizarVestimenta(ctx, w, h);
+  capturedImg = canvas.toDataURL('image/jpeg', 0.6);
+
+  // Mostrar la foto capturada en lugar del video
+  camFrame.innerHTML = `<img src="${capturedImg}" alt="Foto capturada">`;
+  retakeRow.style.display = 'flex';
+  btnCapture.disabled = true;
+
+  const record = {
+    nombres, apellidos, dni,
+    timestamp: Date.now(),
+    status: resultado.aprueba ? 'aprobado' : 'rechazado'
+  };
+  await guardarRegistro(record);
+
+  if(resultado.aprueba){
+    mostrarBanner(true, `Bienvenido/a, ${nombres}. Tu asistencia quedó registrada correctamente.`);
+  }else{
+    mostrarBanner(false, 'No se detectó vestimenta negra (polo o manga larga) en la foto. Tu asistencia no fue registrada. Por favor dirígete a administración para justificarla.');
+  }
+});
+
+btnRetake.addEventListener('click', async () => {
+  statusBanner.classList.remove('show');
+  retakeRow.style.display = 'none';
+  btnCapture.disabled = false;
+  camFrame.innerHTML = `
+    <div class="hint">Ubícate de frente, torso visible dentro del recuadro</div>
+    <video id="video" autoplay playsinline muted></video>
+    <div class="guide"></div>`;
+  video = document.getElementById('video');
+  if(stream) video.srcObject = stream;
+  camFrame.classList.add('ready');
+});
+</script>
+</body>
+</html>
